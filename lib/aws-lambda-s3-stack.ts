@@ -21,10 +21,20 @@ export class AwsLambdaS3Stack extends cdk.Stack {
     });
 
     //const s3UploadArn = 'arn:aws:s3:' + this.region + ':' + this.account + ''
+    const s3UploadArn = 'arn:aws:s3:::' + bucket.bucketName
     lambdaFn.addToRolePolicy(new PolicyStatement({
-        //resources: [bucket.bucketArn],
-        resources: ['*'],
-        actions: ['s3:PutObject']
+        effect: Effect.ALLOW,
+        // TODO: なぜかresourcesを*にしないとLambda -> S3にアクセスできない
+        resources: [
+            bucket.bucketArn,
+            bucket.bucketArn + '/*',
+            s3UploadArn,
+        ],
+        //resources: ['*'],
+        actions: [
+            's3:PutObject',
+            's3:PutObjectAcl',
+        ]
     }));
 
     // MEMO: 意味ないっぽい

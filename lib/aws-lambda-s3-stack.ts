@@ -1,6 +1,6 @@
 import * as cdk from '@aws-cdk/core';
 import {Bucket} from '@aws-cdk/aws-s3';
-import {Effect, PolicyStatement} from '@aws-cdk/aws-iam';
+import {Effect, Group, Policy, PolicyStatement, User, CfnAccessKey} from '@aws-cdk/aws-iam';
 import {Code, Function, Runtime} from '@aws-cdk/aws-lambda';
 
 export class AwsLambdaS3Stack extends cdk.Stack {
@@ -39,6 +39,72 @@ export class AwsLambdaS3Stack extends cdk.Stack {
             's3:PutObjectAcl',
         ]
     }));
+
+    // Redash -> Athenaアクセス用IAMユーザ
+    const userName = 'AthenaUserForRedash';
+    const user = new User(this, userName, {
+        userName: userName,
+    });
+
+    // Redashから利用可能とするために、各種インラインポリシーを付与
+    user.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ['arn:aws:s3:::aws-athena-query-results-*'],
+        actions: [
+            's3:GetBucketLocation',
+            's3:GetObject',
+            's3:ListBucket',
+            's3:ListBucketMultipartUploads',
+            's3:ListMultipartUploadParts',
+            's3:AbortMultipartUpload',
+            's3:CreateBucket',
+            's3:PutObject'
+        ],
+    }));
+
+     user.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ['*'],
+        actions: [
+            'athena:BatchGet*',
+            'athena:Get*',
+            'athena:List*',
+            'athena:StartQueryExecution',
+            'athena:StopQueryExecution'
+        ],
+    }));
+
+    user.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ['arn:aws:s3:::awslambdas3stack-mysamplebucket7c61ea24-1xxk7wmvvxoo5/'],
+        actions: [
+            's3:GetBucketLocation',
+            's3:ListBucket',
+        ],
+    }));
+
+    user.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ['arn:aws:s3:::awslambdas3stack-mysamplebucket7c61ea24-1xxk7wmvvxoo5/*'],
+        actions: [
+            's3:GetObject',
+        ],
+    }));
+
+    /*
+    user.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ['arn:aws:glue:::catalog'],
+        actions: [
+            'glue:GetTable',
+        ],
+    }));
+    */
+
+    // IAMユーザのAWS AccessKey / SecretAccessKey
+    const key = new CfnAccessKey(this, `${userName}Key`, { userName: user.userName });
+    new cdk.CfnOutput(this, `${userName}AccessKey`, { value: key.ref });
+    new cdk.CfnOutput(this, `${userName}SecretAccessKey`, { value: key.attrSecretAccessKey });
 
     // MEMO: 意味ないっぽい
     /*

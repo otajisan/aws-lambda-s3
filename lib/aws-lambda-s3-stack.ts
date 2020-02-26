@@ -16,8 +16,9 @@ export class AwsLambdaS3Stack extends cdk.Stack {
     const lambdaFn = new Function(this, 'LambdaS3UploaderSample', {
         functionName: 'lambda-s3-uploader-sample',
         runtime: Runtime.PYTHON_3_8,
-        code: Code.asset('lambda'),
+        code: Code.fromAsset('lambda.zip'),
         handler: 'uploader.handler',
+        timeout: cdk.Duration.seconds(30),
     });
 
     //const s3UploadArn = 'arn:aws:s3:' + this.region + ':' + this.account + ''
@@ -25,12 +26,14 @@ export class AwsLambdaS3Stack extends cdk.Stack {
     lambdaFn.addToRolePolicy(new PolicyStatement({
         effect: Effect.ALLOW,
         // TODO: なぜかresourcesを*にしないとLambda -> S3にアクセスできない
+        /*
         resources: [
             bucket.bucketArn,
             bucket.bucketArn + '/*',
             s3UploadArn,
         ],
-        //resources: ['*'],
+        */
+        resources: ['*'],
         actions: [
             's3:PutObject',
             's3:PutObjectAcl',
